@@ -4,7 +4,7 @@
 #' This is useful for example to identify technical errors, particularly when there is not extensive replication among samples to conduct more conventional outlier detection.
 #' @param df The dataframe containing peak data. At minimum it should contain columns labeled: name, sample, batch, compound, area, rep, rep_tech \cr
 #' Additional columns are OK, but will not be used.
-#' @param qc.label \code{character()} Label designating the QC sample in the sample column of df. These will not be subjected to pairwise outlier detection since they can be useful downstream, for example with signal drift correction.
+#' @param samps_exclude \code{character()} Label designating the QC sample in the sample column of df. These will not be subjected to pairwise outlier detection since they can be useful downstream, for example with signal drift correction.
 #' @param n.cores \code{numeric()} The number of cores to be used for processing if being run on a multi-core machine
 #' @param mad_threshold \code{numeric()} The median absolute deviation (MAD) threshold to be used when identifying potential outliers
 #' @param pw_threshold \code{numeric()} The pairwise outlier difference threshold. Should be between 0 and 1. Default is set to 0.95, meaning 5% of the data will be identified as a potential outlier.
@@ -26,7 +26,7 @@
 #' @examples
 #' pw_out = pw_outlier(
 #' df = dat,
-#' qc.label = "Pool",
+#' samps_exclude = "Pool",
 #' n.cores = 2,
 #' mad_threshold = 3,
 #' pw_threshold = 0.95,
@@ -45,7 +45,7 @@ pw_outlier <- function(
   grouping_factor = "batch",
   return_plot = FALSE,
   plot_name = "pw_outlier_plot",
-  qc.label = "Pool"){
+  samps_exclude = "Pool"){
   # check input df colnames -------------------------------------------------
   c_names = colnames(df)
   c_names_need = c("name","sample","batch","compound","area","rep","rep_tech")
@@ -91,7 +91,7 @@ pw_outlier <- function(
   }
   mog = m
   m = m %>%
-    filter(!sample%in%all_of(qc.label))
+    filter(!sample%in%all_of(samps_exclude))
   m_na = m %>%
     filter(is.na(area))
   m = m %>%

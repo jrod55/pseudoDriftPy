@@ -17,6 +17,7 @@
 #' }
 #' @param qc.label \code{character()} Label designating the QC sample in the sample column of df.
 #' @param min.qc \code{numeric()} The minimum number of pseudo-QC samples to consider during model training. Should be a value greater than 2.
+#' @param quantile_increment \code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.
 #' @param log_transform \code{logical()} TRUE(default)/FALSE should data be log transformed
 #' @return \code{list()} containing:
 #' \itemize{
@@ -51,6 +52,7 @@ pseudo_sdc <- function(
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = NULL,
+  quantile_increment = 0.10,
   log_transform = TRUE){
 
   nc = length(unique(df$compound))
@@ -69,12 +71,12 @@ pseudo_sdc <- function(
     filter(class == "QC")
   vals_keep = range(vals_keep$pool_rank)
   RU <- function(x, x1){x + x1 - x %% x1}
-  vals_keep[1] = RU(vals_keep[1],0.05)
-  vals_keep[2] = RU(vals_keep[2],0.05)
+  vals_keep[1] = RU(vals_keep[1],quantile_increment)
+  vals_keep[2] = RU(vals_keep[2],quantile_increment)
   # Using what portion of the data and what partitioning of the batch gives best fit for the training data
   set.seed(seed)
-  test_low = seq(0,vals_keep[1],0.05)
-  test_high = seq(vals_keep[2],1,0.05)
+  test_low = seq(0,vals_keep[1],quantile_increment)
+  test_high = seq(vals_keep[2],1,quantile_increment)
   n_breaks = test.breaks
   k = test.window
   ind = test.index
