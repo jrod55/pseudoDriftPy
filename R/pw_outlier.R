@@ -91,7 +91,7 @@ pw_outlier <- function(
   }
   mog = m
   m = m %>%
-    filter(!sample==all_of(qc.label))
+    filter(!sample%in%all_of(qc.label))
   m_na = m %>%
     filter(is.na(area))
   m = m %>%
