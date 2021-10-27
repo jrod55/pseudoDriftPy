@@ -1,0 +1,184 @@
+#' @title simulate_data
+#' @name simulate_data
+#' @description Simulate LC-MS/MS data or any other spectra from sdf db files.
+#' @param db_ids \code{character()} ID(s) of compounds to be read from a validated sdf file.
+#' @param compound_names \code{character()} Name of the compound(s) to be queried. Not case sensitive, but will only search compounds which begin with the string entered.
+#' @param xls_file_name \code{character(1)} Index file in .xls format. \cr
+#' This file can be produced using \link[pseudoDrift]{sdf2Index}.
+#' @param valid_sdf_file \code{character(1)} sdf file to be read. \cr
+#' This file can also be produced using \link[pseudoDrift]{sdf2Index}.
+#' @param nbatch \code{numeric()} Number of batches to simulate.
+#' @param nsamps_per_batch \code{numeric()} A numeric vector the same length as nbatch. Number of samples included in each batch to be simulated.
+#' @param QC_freq \code{numeric()} Frequency of QC samples.
+#' @param multiplyer \code{numeric(1)} value to multiply exact m/z value from MoNA database.
+#' @param seed \code{numeric()} the seed to be used for reproducibility..
+#' @param save_rds \code{logical(1)} To write to an rds file.
+#' @param rds_name \code{character(1)} Name of the .rds file if save_rds is set to TRUE (default is FALSE).
+#' @return A nested tibble. The first column is the db id of the compounds simulated. The second column is the simulated matrix. The following four columns represent four batch simulation scenarios, which are: \cr
+#' \itemize{
+#' \item 1) t1_sim_mat - a monotonic (up/down effect) by batch.
+#' \item 2) t2_sim_mat - a batch to batch block effect.
+#' \item 3) t3_sim_mat - random, no systematic change.
+#' \item 4) t4_sim_mat - monotonic and batch to batch block effect.
+#' }
+#' @import dplyr vroom
+#' @export
+#' @examples
+#' sim1 = simulate_data(compound_names = "tricin",
+#'                      xls_file_name = system.file("extdata", "Index.xls", package = "pseudoDrift"),
+#'                      valid_sdf_file = system.file("extdata", "valid-test.sdf", package = "pseudoDrift"))
+#'
+#' sim2 = simulate_data(db_ids = c("FIO00738", "FIO00739","FIO00740"),
+#'                      xls_file_name = system.file("extdata", "Index.xls", package = "pseudoDrift"),
+#'                      valid_sdf_file = system.file("extdata", "valid-test.sdf", package = "pseudoDrift"))
+#'
+#' ## Providing name or compound db IDs gives the same result
+#' identical(sim1,sim2)
+simulate_data <- function(db_ids = NULL,
+                          compound_names = NULL,
+                          xls_file_name = NULL,
+                          valid_sdf_file = NULL,
+                          nbatch = 3,
+                          nsamps_per_batch = c(100,50,200),
+                          QC_freq = 25,
+                          multiplyer = 1e2,
+                          seed = 123,
+                          save_rds = FALSE,
+                          rds_name = NULL){
+  xls_file <- xls_file_name
+  sdf_file <- valid_sdf_file
+  compound_name <- compound_names
+  set.seed(seed)
+  if (is.null(db_ids)&is.null(compound_name)) {
+    stop(paste0("Need to provide either a db_id or compound_name"))
+  }
+  if (!is.null(db_ids)&!is.null(compound_name)) {
+    stop(paste0("Need to provide either a db_id or compound_name, NOT both"))
+  }
+  if (!grepl("\\.xls$", xls_file)) {
+    stop(paste0("Check your output file name: ", out_name), " needs to end in .xls")
+  }
+  ## Read in the sdf index .xls file
+  idx <- read.delim(paste0(xls_file), nrows = 1)
+  idx <- names(idx)
+  db_dat <- suppressMessages(vroom::vroom(paste0(xls_file), col_names = idx,delim = "\t",skip = 1))
+  if(!is.null(compound_name)){
+    db_dat <- filter(db_dat, grepl(paste0("^",compound_name, collapse = "|"), NAME, ignore.case = TRUE))
+  }
+  if(!is.null(db_ids)){
+    db_dat <- suppressWarnings(filter(db_dat, ID %in% all_of(db_ids)))
+  }
+  if (nrow(db_dat)==0) {
+    stop(paste0("Check your db_id or compound name. There are no matches in the xls_file index file"))
+  }
+  ## create sdf object from indices then pull data matrix
+  sdfset = ChemmineR::read.SDFindex(file = paste0(sdf_file), index = data.frame(db_dat[,2:3]))
+  db_dat = as_tibble(ChemmineR::datablock2ma(datablocklist = ChemmineR::datablock(x = sdfset))) %>%
+    janitor::clean_names()
+  mz_sim = db_dat %>%
+    mutate(mz = as.numeric(exact_mass)) %>%
+    summarise(id = id,
+              mz_sim = mz*multiplyer) %>%
+    distinct()
+  b = sort(rep(1:nbatch, nsamps_per_batch))
+  nsamps = length(b)
+  m_names = paste0("S",1:nsamps, "_B",b)
+  m_sd <- stats::rlnorm(1,meanlog = 2, sdlog = 2.75)
+  p_idx = seq(QC_freq,nsamps, QC_freq)
+  c = toupper(janitor::make_clean_names(db_dat$name))
+
+  ## Generate the matrices as nested tibbles by mapping functions
+  sim_fun = function(x){
+    set.seed(seed)
+    tibble::tibble(tmp = 1,
+           name = m_names,
+           sample = gsub("_.*","",m_names),
+           batch = gsub(".*_","",m_names),
+           compound = c,
+           area = abs(stats::rnorm(nsamps,
+                                   mean = x$mz_sim,
+                                   sd = 0.25*x$mz_sim*m_sd))
+    ) %>%
+      group_by(tmp) %>%
+      mutate(experiment_index = 1:n(),
+             area = ifelse(experiment_index%in%p_idx, x$mz_sim, area),
+             sample = ifelse(experiment_index%in%p_idx, "QC", sample)
+      ) %>%
+      group_by(batch) %>%
+      mutate(batch_index = 1:n()) %>%
+      ungroup() %>%
+      select(-c(tmp))
+  }
+  ## Functions for each batch mode
+  ## Monotonic
+  t1 = function(x){
+    set.seed(seed)
+    x %>%
+      group_by(batch) %>%
+      mutate(up_down = sample(c(T, F),1),
+             up = sort(abs(runif(n(),min = 1, max = 1.5))),
+             down = sort(abs(runif(n(),min = 1, max = 1.5)), decreasing = TRUE),
+             area = ifelse(up_down, area*up, area*down)
+      ) %>%
+      select(-c(up_down, up, down)) %>%
+      ungroup()
+  }
+  ## Batch-to-batch
+  t2 = function(x){
+    set.seed(seed)
+    x %>%
+      group_by(batch) %>%
+      mutate(blk = runif(1,min = 1, max = 3),
+             area = area*blk
+      ) %>%
+      select(-c(blk)) %>%
+      ungroup()
+  }
+  ## Random
+  t3 = function(x){
+    set.seed(seed)
+    x %>%
+      group_by(batch) %>%
+      mutate(area = area*abs(stats::runif(n()))
+             ) %>%
+      ungroup()
+  }
+  ## Monotonic with Batch-to-batch
+  t4 = function(x){
+    set.seed(seed)
+    x %>%
+      group_by(batch) %>%
+      mutate(n_tile = ntile(batch_index, sum(sample=="QC")/0.10)) %>%
+      mutate(up_down = sample(c(T, F),1)) %>%
+      mutate(up = sort(abs(runif(n(),min = 1, max = 1.25))),
+             down = sort(abs(runif(n(),min = 1, max = 1.25)), decreasing = TRUE),
+             area = ifelse(up_down, area*up, area*down)
+      ) %>%
+      group_by(batch, n_tile) %>%
+      mutate(up_down1 = sample(c(T, F),1)) %>%
+      group_by(batch) %>%
+      mutate(n_tile1 = rleid(up_down1)) %>%
+      group_by(batch, n_tile1) %>%
+      mutate(blk = runif(1,min = 0.75, max = 1.25),
+             area = area*blk
+      ) %>%
+      ungroup() %>%
+      select(-c(up_down,up_down1, up, down, n_tile, n_tile1, blk))
+  }
+  ## Nested tibble to be returned
+  sim_dat = mz_sim %>%
+    group_by(id) %>%
+    tidyr::nest() %>%
+    mutate(sim_mat = purrr::map(data, sim_fun),
+           t1_sim_mat = purrr::map(sim_mat, t1),
+           t2_sim_mat = purrr::map(sim_mat, t2),
+           t3_sim_mat = purrr::map(sim_mat, t3),
+           t4_sim_mat = purrr::map(sim_mat, t4)
+    ) %>%
+    select(-c(data)) %>%
+    left_join(.,db_dat, by = "id")
+  if (save_rds) {
+    saveRDS(sim_dat, "simulated_data.rds")
+  }
+  return(sim_dat)
+}

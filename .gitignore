@@ -1,0 +1,7 @@
+pseudoDrift.Rproj
+.Rbuildignore
+.RData
+.Rhistory
+.Rproj.user/
+vignettes/
+pushme.sh

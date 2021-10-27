@@ -1,0 +1,31 @@
+Package: pseudoDrift
+Title: Generates pseudo QC samples from metabolomics datasets to correct for signal batch effects
+Version: 1.0.0
+Authors@R: 
+    person(given = "Jonas",
+           family = "Rodriguez",
+           role = c("aut", "cre"),
+           email = "jrodriguez550@gmail.com")
+Description: Trains various models using metabolomics datasets (peak areas) where true QC samples were included to then generate pseudo-QC samples to correct for batch effects.
+License: use_gpl3_license()
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
+Imports: 
+    ChemmineR,
+    dplyr,
+    janitor,
+    magrittr,
+    purrr,
+    tibble,
+    tidyr,
+    utils,
+    vroom
+Depends: 
+    tidyverse,
+    R (>= 2.10)
+Suggests: 
+    rmarkdown,
+    knitr
+VignetteBuilder: knitr
