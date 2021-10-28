@@ -13,7 +13,7 @@ pw_outlier(
   grouping_factor = "batch",
   return_plot = FALSE,
   plot_name = "pw_outlier_plot",
-  qc.label = "Pool"
+  samps_exclude = "Pool"
 )
 }
 \arguments{
@@ -35,7 +35,7 @@ If set to TRUE (default), values are shrunk towards the distribution of samples 
 
 \item{plot_name}{\code{character()} If return_plot is TRUE, what is the name of the output .pdf file. This will be saved to the current working directory.}
 
-\item{qc.label}{\code{character()} Label designating the QC sample in the sample column of df. These will not be subjected to pairwise outlier detection since they can be useful downstream, for example with signal drift correction.}
+\item{samps_exclude}{\code{character()} Label designating the QC sample in the sample column of df. These will not be subjected to pairwise outlier detection since they can be useful downstream, for example with signal drift correction.}
 }
 \value{
 \code{list()} containing:
@@ -52,7 +52,7 @@ This is useful for example to identify technical errors, particularly when there
 \examples{
 pw_out = pw_outlier(
 df = dat,
-qc.label = "Pool",
+samps_exclude = "Pool",
 n.cores = 2,
 mad_threshold = 3,
 pw_threshold = 0.95,

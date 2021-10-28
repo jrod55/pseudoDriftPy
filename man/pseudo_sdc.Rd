@@ -16,6 +16,7 @@ pseudo_sdc(
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = NULL,
+  quantile_increment = 0.1,
   log_transform = TRUE
 )
 }
@@ -45,6 +46,8 @@ Accepts only one compound at a time. If there are multiple compounds are present
 \item{qc.label}{\code{character()} Label designating the QC sample in the sample column of df.}
 
 \item{min.qc}{\code{numeric()} The minimum number of pseudo-QC samples to consider during model training. Should be a value greater than 2.}
+
+\item{quantile_increment}{\code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.}
 
 \item{log_transform}{\code{logical()} TRUE(default)/FALSE should data be log transformed}
 }

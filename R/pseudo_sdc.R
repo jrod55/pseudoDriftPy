@@ -69,12 +69,9 @@ pseudo_sdc <- function(
     group_by(batch) %>%
     mutate(pool_rank = percent_rank(area)) %>%
     filter(class == "QC")
-  vals_keep = range(vals_keep$pool_rank)
-  RU <- function(x, x1){x + x1 - x %% x1}
-  vals_keep[1] = RU(vals_keep[1],quantile_increment)
-  vals_keep[2] = RU(vals_keep[2],quantile_increment)
+  vals_keep = ceiling(range(vals_keep$pool_rank)/quantile_increment)*quantile_increment
+
   # Using what portion of the data and what partitioning of the batch gives best fit for the training data
-  set.seed(seed)
   test_low = seq(0,vals_keep[1],quantile_increment)
   test_high = seq(vals_keep[2],1,quantile_increment)
   n_breaks = test.breaks
