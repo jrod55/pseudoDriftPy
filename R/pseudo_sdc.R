@@ -433,5 +433,5 @@ pseudo_sdc <- function(
     select(-c(index))
   dd <- c(" ", " -------------- ", " Done! ", " --------------")
   cat(dd, sep = "\n")
-  return(list(df = tmp, df_pseudoQC = df_psuedoQC, df_pseudoQC_corrected = df_psuedoQC_corrected, criteria_table = all_min))
+  return(list(df = df, df_pseudoQC = df_psuedoQC, df_pseudoQC_corrected = df_psuedoQC_corrected, criteria_table = all_min))
 }
