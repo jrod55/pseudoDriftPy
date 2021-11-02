@@ -117,8 +117,8 @@ pseudo_sdc <- function(
       mutate(area_corrected = mc[1,], .before = area)
     m_qc = z %>%
       filter(class == "QC") %>%
-      mutate(rsd = sd(area)/abs(mean(area)),
-             rsd_tqc = sd(area_corrected)/abs(mean(area_corrected)))
+      mutate(rsd = sd(area)/abs(mean(area, na.rm = TRUE)),
+             rsd_tqc = sd(area_corrected, na.rm = TRUE)/abs(mean(area_corrected, na.rm = TRUE)))
     if (r=="yes") {
       return(z)
     }else{
@@ -242,8 +242,8 @@ pseudo_sdc <- function(
       ssr = tibble(pred = pseudoQC$area_corrected,
                    obs = trueQC$area_corrected) %>%
         mutate(sse = (obs-pred)^2) %>%
-        summarise(MSE = mean(sse),
-                  TSS = sum(sse)) %>%
+        summarise(MSE = mean(sse, na.rm = TRUE),
+                  TSS = sum(sse, na.rm = TRUE)) %>%
         mutate(RSD = unique(pseudoQC$rsd_tqc))
     }else{
       ssr = tibble(MSE = NA,
