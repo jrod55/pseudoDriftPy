@@ -11,9 +11,12 @@ simulate_data(
   valid_sdf_file = NULL,
   nbatch = 3,
   nsamps_per_batch = c(100, 50, 200),
-  QC_freq = 25,
+  QC_freq = c(20, 10, 50),
   multiplyer = 100,
   seed = 123,
+  sim_sd = NULL,
+  m_eff = 1.5,
+  b_eff = 3,
   save_rds = FALSE,
   rds_name = NULL
 )
@@ -31,13 +34,19 @@ This file can also be produced using \link[pseudoDrift]{sdf2Index}.}
 
 \item{nbatch}{\code{numeric()} Number of batches to simulate.}
 
-\item{nsamps_per_batch}{\code{numeric()} A numeric vector the same length as nbatch. Number of samples included in each batch to be simulated.}
+\item{nsamps_per_batch}{\code{numeric()} A numeric vector the same length as 1:nbatch. Number of samples included in each batch to be simulated.}
 
-\item{QC_freq}{\code{numeric()} Frequency of QC samples.}
+\item{QC_freq}{\code{numeric()} A numeric vector the same length as 1:nbatch. Frequency of QC samples.}
 
-\item{multiplyer}{\code{numeric(1)} value to multiply exact m/z value from MoNA database.}
+\item{multiplyer}{\code{numeric(1)} value to multiply exact m/z value from MoNA database to have an area measure (default is 1e2)}
 
 \item{seed}{\code{numeric()} the seed to be used for reproducibility..}
+
+\item{sim_sd}{\code{numeric()} Standard deviation of simulated data. Default value is 0.25*m/z value after multiplier.}
+
+\item{m_eff}{\code{numeric()} maximum monotonic effect (slope).}
+
+\item{b_eff}{\code{numeric()} maximum batch effect (between batch mean differences)}
 
 \item{save_rds}{\code{logical(1)} To write to an rds file.}
 

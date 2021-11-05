@@ -6,7 +6,6 @@
 \usage{
 pseudo_sdc(
   df = NULL,
-  seed = 123,
   n.cores = 1,
   train.batch = NULL,
   test.breaks = NULL,
@@ -17,14 +16,13 @@ pseudo_sdc(
   qc.multibatch = FALSE,
   min.qc = NULL,
   quantile_increment = 0.1,
-  log_transform = TRUE
+  log_transform = TRUE,
+  mad_outlier = TRUE,
+  mad_threshold = 3
 )
 }
 \arguments{
-\item{df}{The dataframe containing peak data. At minimum should contain columns labeled: name, sample, batch, compound, area, experiment_index, batch_index. \cr
-Accepts only one compound at a time. If there are multiple compounds are present, run function in a loop, or lapply.}
-
-\item{seed}{\code{numeric()} The seed to be set for reproducible results}
+\item{df}{The dataframe containing peak data. At minimum should contain columns labeled: name, sample, batch, compound, area, experiment_index, batch_index. \cr}
 
 \item{n.cores}{\code{numeric()} The number of cores to be used for processing if being run on a multi-core machine}
 
@@ -50,6 +48,10 @@ Accepts only one compound at a time. If there are multiple compounds are present
 \item{quantile_increment}{\code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.}
 
 \item{log_transform}{\code{logical()} TRUE(default)/FALSE should data be log transformed}
+
+\item{mad_outlier}{\code{logical()} TRUE(default)/FALSE should median absolute deviation (MAD) based outliers be excluded from signal drift calculation}
+
+\item{mad_threshold}{\code{numeric()} How many MAD from the median a value can be before considered an outlier. Default is 3.}
 }
 \value{
 \code{list()} containing:
@@ -64,13 +66,19 @@ Accepts only one compound at a time. If there are multiple compounds are present
 Signal drift correction using QC samples present in some batches but absent in others.
 }
 \examples{
-sdc_out = pseudo_sdc(df = tog,
-                     train.batch = "Run 4",
-                     test.breaks = seq(10,25,2),
-                     test.window = seq(1,10,2),
-                     test.index = seq(0,35,5),
-                     qc.label = "Pool",
-                     min.qc = 10)
+sim_dat = simulate_data(db_ids = "FIO00738",
+                        nsamps_per_batch = 100,
+                        xls_file_name = system.file("extdata", "Index.xls", package = "pseudoDrift"),
+                        valid_sdf_file = system.file("extdata", "valid-test.sdf", package = "pseudoDrift"))
 
+df = sim_dat[["t4_sim_mat"]][[1]]
+
+sdc_out = pseudo_sdc(df = df,
+                     train.batch = "B3",
+                     test.breaks = seq(2,3,1),
+                     test.window = seq(1,3,2),
+                     test.index = seq(2,3,1),
+                     qc.label = "QC",
+                     min.qc = 2)
 list2env(sdc_out ,.GlobalEnv)
 }
