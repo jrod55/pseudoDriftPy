@@ -12,8 +12,9 @@
 #' @param QC_freq \code{numeric()} A numeric vector the same length as 1:nbatch. Frequency of QC samples.
 #' @param multiplyer \code{numeric(1)} value to multiply exact m/z value from MoNA database to have an area measure (default is 1e2)
 #' @param sim_sd \code{numeric()} Standard deviation of simulated data. Default value is 0.25*m/z value after multiplier.
-#' @param m_eff \code{numeric()} maximum monotonic effect (slope).
-#' @param b_eff \code{numeric()} maximum batch effect (between batch mean differences)
+#' @param m_eff \code{numeric()} monotonic effect (slope). Should be >=1.
+#' @param b_eff_pos \code{numeric()} batch effect in the positive direction (between batch mean differences). Should be <=1.
+#' @param b_eff_neg \code{numeric()} batch effect in the negative direction (between batch mean differences). Should be >=1
 #' @param seed \code{numeric()} the seed to be used for reproducibility..
 #' @param save_rds \code{logical(1)} To write to an rds file.
 #' @param rds_name \code{character(1)} Name of the .rds file if save_rds is set to TRUE (default is FALSE).
@@ -42,13 +43,14 @@ simulate_data <- function(db_ids = NULL,
                           xls_file_name = NULL,
                           valid_sdf_file = NULL,
                           nbatch = 3,
-                          nsamps_per_batch = c(100,50,200),
-                          QC_freq = c(20,10,50),
+                          nsamps_per_batch = c(100,200, 300),
+                          QC_freq = c(25,25,25),
                           multiplyer = 1e2,
                           seed = 123,
                           sim_sd = NULL,
-                          m_eff = 1.5,
-                          b_eff = 3,
+                          m_eff = 1.25,
+                          b_eff_pos = 1.25,
+                          b_eff_neg = 0.75,
                           save_rds = FALSE,
                           rds_name = NULL){
   xls_file <- xls_file_name
@@ -102,7 +104,7 @@ simulate_data <- function(db_ids = NULL,
   p_idx = bind_rows(pp)
   c = toupper(janitor::make_clean_names(db_dat$name))
   mz_sim = mz_sim %>%
-    mutate(compound = all_of(c))
+    mutate(compound = paste0(all_of(c),"_SIMULATED"))
 
   ## Generate the matrices as nested tibbles by mapping functions
   sim_fun = function(x){
@@ -152,7 +154,7 @@ simulate_data <- function(db_ids = NULL,
     set.seed(seed)
     x %>%
       group_by(batch) %>%
-      mutate(blk = runif(1,min = 1, max = b_eff),
+      mutate(blk = runif(1,min = b_eff_neg, max = b_eff_pos),
              area = area*blk
       ) %>%
       select(-c(blk)) %>%
@@ -170,14 +172,15 @@ simulate_data <- function(db_ids = NULL,
   ## Monotonic with Batch-to-batch
   t4 = function(x){
     set.seed(seed)
-      mm_eff <- m_eff*(2/3)
-      bb_eff <- b_eff*(1/3)
+    mm_eff <- sort(c(m_eff,1))
+    bb_eff <- sort(c(b_eff_neg, b_eff_pos))
+
     x %>%
       group_by(batch) %>%
-      mutate(n_tile = ntile(batch_index, sum(sample=="QC")/0.10)) %>%
+      mutate(n_tile = ntile(batch_index, sum(sample=="QC")*2)) %>%
       mutate(up_down = sample(c(T, F),1)) %>%
-      mutate(up = sort(abs(runif(n(),min = 1, max = mm_eff))),
-             down = sort(abs(runif(n(),min = 1, max = mm_eff)), decreasing = TRUE),
+      mutate(up = sort(abs(runif(n(),min = mm_eff[1], max = mm_eff[2]))),
+             down = sort(abs(runif(n(),min = mm_eff[1], max = mm_eff[2])), decreasing = TRUE),
              area = ifelse(up_down, area*up, area*down)
       ) %>%
       group_by(batch, n_tile) %>%
@@ -185,7 +188,7 @@ simulate_data <- function(db_ids = NULL,
       group_by(batch) %>%
       mutate(n_tile1 = rleid(up_down1)) %>%
       group_by(batch, n_tile1) %>%
-      mutate(blk = runif(1,min = 0.75, max = bb_eff),
+      mutate(blk = runif(1,min = bb_eff[1], max = bb_eff[2]),
              area = area*blk
       ) %>%
       ungroup() %>%
