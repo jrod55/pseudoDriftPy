@@ -58,7 +58,7 @@ pseudo_sdc <- function(
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = NULL,
-  quantile_increment = 0.10,
+  quantile_increment = 1,
   log_transform = TRUE,
   mad_outlier = TRUE,
   mad_threshold = 3){

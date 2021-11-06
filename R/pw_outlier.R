@@ -18,6 +18,7 @@
 #' \item df (original input data)
 #' \item df_cleaned (pairwise outlier cleaned data).
 #' \item df_rm (samples removed by the pairwise outlier elimination).
+#' \item batch_plots plots of quantile threshold for each batch. Only returned if return_plot is set to TRUE.
 #' }
 #' @import dplyr tidyr
 #' @importFrom data.table fread
@@ -26,7 +27,7 @@
 #' @examples
 #' pw_out = pw_outlier(
 #' df = dat,
-#' samps_exclude = "Pool",
+#' samps_exclude = "QC",
 #' n.cores = 2,
 #' mad_threshold = 3,
 #' pw_threshold = 0.95,
@@ -45,7 +46,7 @@ pw_outlier <- function(
   grouping_factor = "batch",
   return_plot = FALSE,
   plot_name = "pw_outlier_plot",
-  samps_exclude = "Pool"){
+  samps_exclude = "QC"){
   # check input df colnames -------------------------------------------------
   c_names = colnames(df)
   c_names_need = c("name","sample","batch","compound","area","rep","rep_tech")
@@ -158,7 +159,11 @@ pw_outlier <- function(
     }
     return(list(samps_rm = samps_rm,samps_plot = samps_plot))
   }
-  pw_results = parallel::mclapply(seq_along(integrated_compounds), pw_fn, mc.cores = n.cores)
+  if (n.cores==1) {
+    pw_results = lapply(seq_along(integrated_compounds), pw_fn)
+  }else{
+    pw_results = parallel::mclapply(seq_along(integrated_compounds), pw_fn, mc.cores = n.cores)
+  }
   samps_rm1 = lapply(pw_results,"[[", 1)
   samps_rm1 = bind_rows(samps_rm1) %>%
     select(-c(variable, value)) %>%
@@ -167,6 +172,7 @@ pw_outlier <- function(
   samps_plot1 = lapply(pw_results,"[[", 2)
   samps_plot1 = bind_rows(samps_plot1)
   if(return_plot){
+    p_out = list()
     pdf(paste0(plot_name,".pdf"),width = 10,height = 10)
     for (i in seq_along(integrated_compounds)) {
       comp_thresh = samps_plot1 %>%
@@ -196,6 +202,7 @@ pw_outlier <- function(
           legend.direction='horizontal'
         )+
         labs(x = "Replication pairwise differences", y = "Density",title = integrated_compounds[i])
+      p_out[[i]] = p
       print(p)
     }
     dev.off()
@@ -215,5 +222,9 @@ pw_outlier <- function(
     select(all_of(c_names))
   dd <- c(" ", " -------------- ", " Done! ", " --------------")
   cat(dd, sep = "\n")
-  return(list(df = df, df_cleaned = m1, df_rm = dat_removed))
+  if (return_plot) {
+    return(list(df = df, df_cleaned = m1, df_rm = dat_removed, batch_plots = p_out))
+  }else{
+    return(list(df = df, df_cleaned = m1, df_rm = dat_removed))
+  }
 }

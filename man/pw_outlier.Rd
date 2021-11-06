@@ -13,7 +13,7 @@ pw_outlier(
   grouping_factor = "batch",
   return_plot = FALSE,
   plot_name = "pw_outlier_plot",
-  samps_exclude = "Pool"
+  samps_exclude = "QC"
 )
 }
 \arguments{
@@ -43,6 +43,7 @@ If set to TRUE (default), values are shrunk towards the distribution of samples 
 \item df (original input data)
 \item df_cleaned (pairwise outlier cleaned data).
 \item df_rm (samples removed by the pairwise outlier elimination).
+\item batch_plots plots of quantile threshold for each batch. Only returned if return_plot is set to TRUE.
 }
 }
 \description{
@@ -52,7 +53,7 @@ This is useful for example to identify technical errors, particularly when there
 \examples{
 pw_out = pw_outlier(
 df = dat,
-samps_exclude = "Pool",
+samps_exclude = "QC",
 n.cores = 2,
 mad_threshold = 3,
 pw_threshold = 0.95,

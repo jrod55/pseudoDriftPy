@@ -10,13 +10,14 @@ simulate_data(
   xls_file_name = NULL,
   valid_sdf_file = NULL,
   nbatch = 3,
-  nsamps_per_batch = c(100, 50, 200),
-  QC_freq = c(20, 10, 50),
+  nsamps_per_batch = c(100, 200, 300),
+  QC_freq = c(25, 25, 25),
   multiplyer = 100,
   seed = 123,
   sim_sd = NULL,
-  m_eff = 1.5,
-  b_eff = 3,
+  m_eff = 1.25,
+  b_eff_pos = 1.25,
+  b_eff_neg = 0.75,
   save_rds = FALSE,
   rds_name = NULL
 )
@@ -44,9 +45,11 @@ This file can also be produced using \link[pseudoDrift]{sdf2Index}.}
 
 \item{sim_sd}{\code{numeric()} Standard deviation of simulated data. Default value is 0.25*m/z value after multiplier.}
 
-\item{m_eff}{\code{numeric()} maximum monotonic effect (slope).}
+\item{m_eff}{\code{numeric()} monotonic effect (slope). Should be >=1.}
 
-\item{b_eff}{\code{numeric()} maximum batch effect (between batch mean differences)}
+\item{b_eff_pos}{\code{numeric()} batch effect in the positive direction (between batch mean differences). Should be <=1.}
+
+\item{b_eff_neg}{\code{numeric()} batch effect in the negative direction (between batch mean differences). Should be >=1}
 
 \item{save_rds}{\code{logical(1)} To write to an rds file.}
 
