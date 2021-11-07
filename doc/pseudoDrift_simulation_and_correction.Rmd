@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-We will demonstrate the functionality of pseudoDrift by data simulation followed by signal drift correction. To get started, make sure you have the most recent development version from [GitHub](https://github.com/) installed. Throughout this document, QC is meant to describe quality control or replicate samples of the same type. These are typically included in metabolomics studies as a way to identify and correct technical errors or other anomalies which may occur during the data acquisition phase of an experiment.
+We will demonstrate the functionality of pseudoDrift by data simulation followed by outlier identification then signal drift correction. To get started, make sure you have the most recent development version from [GitHub](https://github.com/) installed. Throughout this document, QC is meant to describe quality control or replicate samples of the same type evaluated within and or between batches in metabolomics studies. These are typically used to identify and correct technical errors or other anomalies which may occur during the data acquisition phase of an experiment.
 
 ```{r, eval=TRUE, message=FALSE}
 # install.packages("remotes")
@@ -34,100 +34,190 @@ library(data.table)
 ```
 
 # Data simulation
-To simulate data, first we need an indexed and validated .sdf file to pull the metadata associated with the compound we are interested in. We are using a small .sdf file which is included as part of this package, but to construct your own, simply run the command below. The `sdf2index` function uses a few ChemmineR R package [@R-ChemmineR] functions to create an indexed file so that the entire .sdf file doesn't need to be loaded into memory.
+To simulate data, first we need an indexed and validated .sdf file to pull the metadata associated with the compound we are interested in. We are using a small .sdf file which is included as part of this package, but to construct your own, simply run the command below. The `sdf2index` function uses a few ChemmineR R package [@R-ChemmineR] functions to create an indexed file so that the entire .sdf file doesn't need to be loaded into memory. The .sdf file included in the package was obtained from the [MoNA](https://mona.fiehnlab.ucdavis.edu/) online database.
 
 ```{r, eval=FALSE}
 # sdf2index(sdf_input = "/path_to_your/desired.sdf", out_name = "Index.xls") # Example
-sdf2index(sdf_input = system.file("extdata", "test.sdf", package = "pseudoDrift"), out_name = "Index.xls") # Can run, but not necessary for this vignette
+# sdf2index(sdf_input = system.file("extdata", "test.sdf", package = "pseudoDrift"), out_name = "Index.xls") # Can run, but not necessary for this vignette
 ```
 
-The `simulate_data` function takes as input a compound name (which should be present in the .sdf file) or a db ID (also should be present in the .sdf file) and simulates peak matrices using m/z values for the queried compound. We can also adjust the number of batches `nbatch`, number of samples per batch `nsamps_per_batch`, and the frequency of QC samples `QC_freq` during the simulation. Lastly, the `seed` can be changed to generate a new simulation.
+The `simulate_data` function takes as input a compound name (which should be present in the .sdf file) or a db ID (also should be present in the .sdf file) and simulates peak matrices using m/z values for the queried compound.The number of batches `nbatch`, number of samples per batch `nsamps_per_batch`, and the frequency of QC samples `QC_freq` in each batch can be adjusted by changing the commented lines below. There are additional parameters which allow the user to adjust the variance, scale, and severity of batch and drift effects. Lastly, changing the `seed` will generate a new simulation.
 
 ```{r, eval=TRUE}
 sim1 = simulate_data(compound_names = "tricin",
                      xls_file_name = system.file("extdata", "Index.xls", package = "pseudoDrift"),
                      valid_sdf_file = system.file("extdata", "valid-test.sdf", package = "pseudoDrift"),
-                     nbatch = 3,
-                     nsamps_per_batch = c(25, 50, 100),
-                     QC_freq = c(5,15,20),
-                     seed = 123)
+                     # nbatch = 3,
+                     # nsamps_per_batch = c(100, 200, 300),
+                     # QC_freq = c(25, 25, 25),
+                     # seed = 123
+                     )
 ```
 
-The code above generates simulated data for each instance of 'tricin' found in the .sdf file. The sim1 object is a nested tibble which contains all metadata available for the compound, along with the simulated data (sim_mat) and four signal drift and batch effect types: 1) monotonic (t1_sim_mat) , 2) batch-to-batch block effect (t2_sim_mat) , 3) random (t3_sim_mat), 4) monotonic coupled with batch-to-batch effect (t4_sim_mat).
+The chunk of code above generates simulated data for each instance of 'tricin' found in the .sdf file. Here we are using the default parameters (commented out) which simulate data for three batches, each with one hundred more samples than the previous batch, and with a QC sample included every twenty five samples. \
+
+The sim1 object is a nested tibble which contains all metadata available for the compound, along with the simulated data (sim_mat) and four signal drift and batch effect types: 1) monotonic (t1_sim_mat) , 2) batch-to-batch block effect (t2_sim_mat) , 3) random (t3_sim_mat), 4) monotonic coupled with batch-to-batch effect (t4_sim_mat).
 
 **Column names of the nested tibble returned by** `simulate_data`
 ```{r, eval=TRUE}
 names(sim1)
 ```
 
-From the nested tibble above, we can isolate an individual row using the compound id from in the first column then pull the corresponding simulated data using list indexing syntax. In the code below, we are going to isolate the simulated data from the first id: FIO00738 then visualize the signal drift trends simulated. 
+Note that in the tibble above, columns 2:6 are nested tibbles which is where the simulation outputs are stored. We can isolate an individual row using the compound id from in the first column then pull the corresponding simulated data using list indexing syntax. In the code below, we are isolating the simulated data from the first id: FIO00738.
 
 ```{r, eval=TRUE}
 sim1_sub = sim1 %>% 
   filter(id=="FIO00738")
 
-sim_dat = sim1_sub$sim_mat[[1]]         # simulated no effects
-mono = sim1_sub$t1_sim_mat[[1]]         # monotonic
-b2b = sim1_sub$t2_sim_mat[[1]]          # batch-to-batch
-rando = sim1_sub$t3_sim_mat[[1]]        # random
-mono_b2b = sim1_sub$t4_sim_mat[[1]]     # monotonic and batch-to-batch
+sim_dat = sim1_sub$sim_mat[[1]]         # Simulated no effects
+mono = sim1_sub$t1_sim_mat[[1]]         # Monotonic
+b2b = sim1_sub$t2_sim_mat[[1]]          # Batch-to-batch
+rando = sim1_sub$t3_sim_mat[[1]]        # Random
+mono_b2b = sim1_sub$t4_sim_mat[[1]]     # Monotonic and batch-to-batch
 ```
 
-Plot and highlight the QC samples
+Lets visualize the signal drift trends simulated, highlighting the QC samples we simulated.
 
-```{r, fig.height=5, fig.width=6.5, eval=TRUE}
-# small plotting function
+```{r, eval=TRUE}
+# Small plotting function
 plt_fun = function(x,dat_lab){
   qc_samps = x %>% filter(sample=="QC")
   plt = ggplot(x, aes(batch_index, area))+
-    geom_point()+
-  geom_point(data = qc_samps, aes(color=sample))+
-  geom_line(data = qc_samps, aes(color=sample))+
-  facet_grid(cols = vars(batch), scales = "free")+
-  labs(title = paste0(dat_lab))
+    geom_point(size = 0.75)+
+    geom_point(size = 2, data = qc_samps, aes(color=sample))+
+    geom_line(data = qc_samps, aes(color=sample))+
+    facet_grid(cols = vars(batch), scales = "free")+
+    labs(title = paste0(dat_lab), y = "area_simulated")
   return(plt)
 }
+```
 
+```{r,fig.align = "center", eval=TRUE}
 plt_fun(sim_dat, "Simulated")
 plt_fun(mono, "Monotonic")
 plt_fun(b2b, "Batch-to-batch")
 plt_fun(rando, "Random")
 plt_fun(mono_b2b, "Monotonic and batch-to-batch")
+```
 
+For the remainder of the vignette, we'll be focusing on the monotonic + batch-to-batch simulated data. Primarily because this is what is most typically observed in real data sets.
+
+# Pairwise outlier identification
+It is a challenging task to identify and remove outliers from any set of data, and having limited replication can further complicate this task. Here we introduce an outlier identification method `pw_outlier` which compares within sample pairwise differences (among individual sample replicates) to the distribution of all differences among samples. To illustrate how this procedure works, lets analyse our simulated data with the `pw_outlier` function.
+
+```{r, eval=TRUE, fig.align = "center", fig.height=6, fig.width=10.5}
+# Assign replicates to simulated data. Note no technical replicates are included here, assuming only biological replicates.
+n_reps = 3
+qcs = mono_b2b %>%
+  filter(sample=="QC")
+tmp = mono_b2b %>%
+  filter(!sample=="QC") %>%
+  mutate(n_samps = n()/all_of(n_reps))
+dat_rep = rep(1:n_reps, unique(tmp$n_samps))
+dat_sam = paste0("S",rep(1:unique(tmp$n_samps), each = n_reps))
+
+# The Monotonic + batch-to-batch simulated data with replicateds assigned 
+mono_b2b_WR = tmp %>%
+  mutate(rep = all_of(dat_rep),
+         sample = all_of(dat_sam),
+         rep_tech = 1) %>%
+  bind_rows(.,qcs) %>%
+  arrange(experiment_index)
+
+pw_out = pw_outlier(df = mono_b2b_WR, 
+                    return_plot = TRUE, 
+                    samps_exclude = "QC")
+
+pw_out$batch_plots
+```
+
+The plots returned by `pw_outlier` show the density distribution of all within sample pairwise differences. For example, for sample S1 with reps 1, 2, 3 the pairwise differences would be computed as |1-2|, |1-3|, |2-3|. The density curve plotted for each batch shows all pairwise differences between replicates of an individual sample. As expected, most differences are small, which results in a positively skewed distribution. The blue vertical lines and the corresponding values are the threshold difference value to be applied in outlier identification per batch.
+
+```{r, eval=TRUE, fig.align = "center"}
+# Make a plot of the data removed by pairwise outlier removal
+df_rm = pw_out$df_rm %>%
+  mutate(sample = "Outlier")
+plt_fun(pw_out$df_cleaned, "Monotonic and batch-to-batch pairwise cleaned")+
+  geom_point(data = df_rm, size = 1.25, aes(fill=sample), color = "blue")
 ```
 
 # Signal drift correction
-We will now focus only on the type 4 signal drift and batch effect simulation. Primarily because this is what is most typically observed in real datasets. Suppose we ran a large metabolomics experiment such as the one simulated in the previous section. Only now, we assume that QC samples were run in batch 3 alone. Using the data from batch 3 as a training batch, we estimate three parameters (`test.breaks`, `test.window`, `test.index`) from the non-QC samples, to predict the signal drift trends in the remaining batches with what we call 'pseudoQC' samples.
+Suppose that QC samples were included in batch 3 alone. This would present issues for QC-based correction methods which adjust the data relying on the presence of QCs across all batches. We introduce a method `pseudo_sdc` to estimate what we call 'pseudoQC' samples from all non-QC samples in a training batch. \
+
+The training batch contains QC samples and is used to find the optimal set of three parameters (`test.breaks`, `test.window`, `test.index`) which are used to estimate pseudoQCs and minimize the `criteria` (set by the user) between pseudoQCs and true QCs. \
+
+Internally, the `psuedo_sdc` function fits all possible regression splines with the derived pseudoQC samples calculated from the data in the training batch. These regressions are fit using the Quality Control-Robust Spline Correction `QCRSC` function from the pmp R package [@R-pmp] and finally the optimal combination of input parameters are applied to the training data to estimate 'pseudoQC' samples and apply the correction between batches and for signal drift. \
 
 ```{r, eval=TRUE}
-train.batch = "B3"         # Batch to be used as training set
-test.breaks = seq(10,12,1) # Test breaking up the training batch into 10 to 12 equally sized sections
-test.window = seq(1,9,2)  # Test taking the median every 1 (reduces to the mean per test.break), to 9 samples. This sequence of numbers should be all odd.
-test.index = seq(0,5,5)   # Test offsetting the injection order of pseudoQC samples estimated
-criteria = "MSE"           # This can be one of: "RSD" (relative standard deviation), "MSE" (mean squared error), or "TSS" (total sum of squares). This is the criteria to be minimized.
-n.cores = 10               # Number of cores to use if your machine has the ability to multi-thread processes.
+# Use the pw cleaned data
+mono_b2b_cleaned = pw_out$df_cleaned
 
+# A good starting point for parameters to test
+train.batch = "B3"
+df_param = mono_b2b_cleaned %>%
+  filter(!sample=="QC") %>%
+  group_by(batch) %>%
+  summarise(samps = n_distinct(name))
 
-sdc_out = pseudo_sdc(df = mono_b2b,
+# Sample size of smallest batch
+s_perBatch = min(df_param$samps)
+
+# Test breaks in smallest batch, using the number of QC samples simulated there
+mnqc = 25
+t.b = round(s_perBatch/mnqc)+1
+
+# Proportional in larger training set
+df_param = df_param %>%
+  mutate(bre = round(samps*all_of(t.b)/all_of(s_perBatch)))
+t.b.train = df_param %>%
+  filter(batch == all_of(train.batch)) %>%
+  pull(bre)
+t.b.train = seq(t.b.train-3, t.b.train+3, 1)
+
+# Test window for median smoothing. Should be a vector of odd numbers
+w.n.max = round(min(s_perBatch/t.b))/2
+w.n = 2*floor(w.n.max/2)+1
+if (w.n>w.n.max) {
+  w.n = w.n-2
+}
+w.n = seq(1,w.n,2)
+
+# Test index offset. Larger values can be tested with larger datasets
+ti.max = round(s_perBatch*0.15)
+t.i = seq(0,ti.max,1)
+
+# test.breaks = t.b.train     # Test breaking up the training batch into 10 to 12 equally sized sections
+# test.window = w.n           # Test taking the median every 1 (reduces to the mean per test.break), to 9 samples. This sequence of numbers should be all odd.
+# test.index = t.i            # Test offsetting the injection order of pseudoQC samples estimated
+# criteria = "RSD"            # This can be one of: "RSD" (relative standard deviation), "MSE" (mean squared error), or "TSS" (total sum of squares). This is the criteria to be minimized.
+# n.cores = 15                # Number of cores to use if your machine has the ability to multi-thread processes.
+# quantile_increment = 0.05   # Quantile values (above/below increment) of the data surrounding QCs to use to estimate pseudoQCs.
+
+# To reduce computing time, we are going to use values previously obtained by running the exhaustive set of tests with the inputs commented out above.
+
+# For MSE and TSS criteria:
+# test.breaks = 12 ; test.window = 7; test.index = 5; criteria = "MSE"; quantile_increment = 0.05; n.cores = 1
+
+# For RSD:
+test.breaks = 13 ; test.window = 9; test.index = 14; criteria = "RSD"; quantile_increment = 0.05; n.cores = 1
+
+sdc_out = pseudo_sdc(df = mono_b2b_cleaned,
+                     n.cores = n.cores,
                      train.batch = train.batch,
                      test.breaks = test.breaks,
                      test.window = test.window,
                      test.index = test.index,
                      criteria = criteria,
                      qc.label = "QC",
-                     n.cores = n.cores,
-                     min.qc = min(test.breaks))
+                     min.qc = min(test.breaks),
+                     quantile_increment = quantile_increment)
 
 ```
 
-Internally, the `psuedo_sdc` function fits all possible regression splines with the derived 'pseudoQC' samples calculated from the data in the training batch. These regressions are fit using the Quality Control-Robust Spline Correction `QCRSC` function from the pmp R package [@R-pmp] and finally the optimal combination of input parameters are applied to the training data to estimate 'pseudoQC' samples and apply the correction between batches and for signal drift. \
-
-The figure below illustrates the raw data in (A) and the signal drift and batch corrected data using pseudo_sdc (B). 
-
-```{r, eval=TRUE, echo = FALSE, fig.height=8.5, fig.width=6.5}
+```{r, eval=TRUE, fig.height=7, fig.width=8.5, fig.align = "center"}
 # slightly larger plotting function
 plt_fun1 = function(x,train.batch){
-  metab = paste0(unique(x$df$compound),"_SIMULATED")
+  metab = unique(x$df$compound)
   x1 = x$df_pseudoQC %>% 
     group_by(batch) %>% 
     mutate(index = 1:n(),
@@ -169,28 +259,36 @@ plt_fun1 = function(x,train.batch){
 plt_fun1(sdc_out,train.batch)
 ```
 
-## Comparing correction with originally simulated data
+The figure above illustrates the raw data in (A) and the signal drift and batch corrected data using pseudo_sdc (B).
 
-```{r eval=TRUE, fig.height=8.5, fig.width=6.5}
-cor_dat = sdc_out$df_pseudoQC_corrected %>% 
-  select(name:area_corrected, class) %>% 
-  left_join(., sim_dat) %>% 
+# Comparing correction with originally simulated data
+In the previous section we are able to see how well pseudoQCs are able to correct the data with respect to QC samples alone. Lets see how well the correction does for non-QC samples, using the originally simulated data.
+
+```{r eval=TRUE,  fig.align = "center"}
+cor_dat = sdc_out$df_pseudoQC_corrected %>%
+  select(name,area_corrected, class) %>%
+  left_join(., sim_dat) %>%
   drop_na(area)
 
 cor_dat %>% 
   ggplot(., aes(area_corrected, area, color = batch))+
-  geom_point()+
+  geom_point(alpha=0.5)+
   labs(x = "area_corrected_with_pseudoQC",
        y = "original_area_simulated_without_any_effects")
 
-  
+```
+
+The figure shows that across batches, the correction with pseudoQCs does does a relatively good job of correcting the data back to our originally simulated. Lets get some concrete metrics for how well the modeling performed.
+
+```{r eval=TRUE, fig.height=10, fig.width=10, fig.align = "center"}
 library(caret)
 fc = trainControl(method = "cv", number = 10)
 fit = train(area ~ area_corrected, 
              data = cor_dat, 
              method = "lm", 
              trControl = fc)
-
+fit
+par(mfrow = c(2, 2))
 plot(fit$finalModel)
 ```
 
