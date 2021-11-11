@@ -65,6 +65,12 @@ pw_outlier <- function(
   # make lists to hold output -----------------------------------------------
   samps_rm = list()
   samps_plot = list()
+
+  # place NA data into removal ----------------------------------------------
+  m_na = m %>%
+    filter(is.na(area))
+  m = m %>%
+    drop_na(area)
   # additional df calculations by compound ----------------------------------
   m = m %>%
     group_by(sample, compound, rep_tech, g) %>%
@@ -79,8 +85,8 @@ pw_outlier <- function(
            my_quant = qnorm(my_rank/(n()+1)),
            my_mad = mad(area, na.rm = TRUE),
            my_thresh = all_of(mad_threshold)*my_mad + median(area, na.rm = TRUE),
-           area_tmp = ifelse(area>=my_thresh, NA,area),
-           area_shrink = ifelse(area>=my_thresh, max(area_tmp, na.rm = TRUE)+abs(my_quant),area))
+           area_tmp = ifelse(area>my_thresh, NA,area),
+           area_shrink = ifelse(area>my_thresh, max(area_tmp, na.rm = TRUE)+abs(my_quant),area))
   if (peak_shrinkage) {
     m = m %>%
       mutate(area_og = area,
@@ -93,10 +99,6 @@ pw_outlier <- function(
   mog = m
   m = m %>%
     filter(!sample%in%all_of(samps_exclude))
-  m_na = m %>%
-    filter(is.na(area))
-  m = m %>%
-    drop_na(area)
   ## Change option to supress warning message when summarizing
   options(dplyr.summarise.inform = FALSE)
   ## Compounds in data

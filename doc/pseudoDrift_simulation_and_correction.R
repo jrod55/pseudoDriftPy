@@ -27,7 +27,7 @@ sim1 = simulate_data(compound_names = "tricin",
 names(sim1)
 
 ## ---- eval=TRUE---------------------------------------------------------------
-sim1_sub = sim1 %>% 
+sim1_sub = sim1 %>%
   filter(id=="FIO00738")
 
 sim_dat = sim1_sub$sim_mat[[1]]         # Simulated no effects
@@ -67,7 +67,7 @@ tmp = mono_b2b %>%
 dat_rep = rep(1:n_reps, unique(tmp$n_samps))
 dat_sam = paste0("S",rep(1:unique(tmp$n_samps), each = n_reps))
 
-# The Monotonic + batch-to-batch simulated data with replicateds assigned 
+# The Monotonic + batch-to-batch simulated data with replicateds assigned
 mono_b2b_WR = tmp %>%
   mutate(rep = all_of(dat_rep),
          sample = all_of(dat_sam),
@@ -75,8 +75,8 @@ mono_b2b_WR = tmp %>%
   bind_rows(.,qcs) %>%
   arrange(experiment_index)
 
-pw_out = pw_outlier(df = mono_b2b_WR, 
-                    return_plot = TRUE, 
+pw_out = pw_outlier(df = mono_b2b_WR,
+                    return_plot = TRUE,
                     samps_exclude = "QC")
 
 pw_out$batch_plots
@@ -157,40 +157,40 @@ sdc_out = pseudo_sdc(df = mono_b2b_cleaned,
 # slightly larger plotting function
 plt_fun1 = function(x,train.batch){
   metab = unique(x$df$compound)
-  x1 = x$df_pseudoQC %>% 
-    group_by(batch) %>% 
+  x1 = x$df_pseudoQC %>%
+    group_by(batch) %>%
     mutate(index = 1:n(),
            class = factor(class, levels = c("QC", "Pseudo_QC", "Sample")))
-  
-  qcs1 = x1 %>% 
-    filter(class%in%c("QC","Pseudo_QC")) %>% 
+
+  qcs1 = x1 %>%
+    filter(class%in%c("QC","Pseudo_QC")) %>%
     mutate(sample = class)
-  
+
   plt1 = ggplot(x1, aes(index, area))+
     geom_point()+
     geom_point(data = qcs1, aes(color=sample))+
     geom_line(data = qcs1, aes(color=sample))+
     facet_grid(cols = vars(batch), scales = "free")+
     labs(title = paste0(metab," raw data using ",train.batch, " data to train pseudo-QC"))
-  
+
   legend = cowplot::get_legend(plt1)
-  
-  x2 = x$df_pseudoQC_corrected %>% 
-    group_by(batch) %>% 
+
+  x2 = x$df_pseudoQC_corrected %>%
+    group_by(batch) %>%
     mutate(index = 1:n(),
            class = factor(class, levels = c("QC", "Pseudo_QC", "Sample")))
-  
-  qcs2 = x2 %>% 
-    filter(class%in%c("QC","Pseudo_QC")) %>% 
+
+  qcs2 = x2 %>%
+    filter(class%in%c("QC","Pseudo_QC")) %>%
     mutate(sample = class)
-  
+
   plt2 = ggplot(x2, aes(index, area_corrected))+
     geom_point()+
     geom_point(data = qcs2, aes(color=sample))+
     geom_line(data = qcs2, aes(color=sample))+
     facet_grid(cols = vars(batch), scales = "free")+
     labs(title = paste0(metab," pseudo-QC corrected data"))
-  
+
   cplt = cowplot::plot_grid(plt1, plt2, ncol = 1, labels = c("A","B"))
   return(cplt)
 }
@@ -203,7 +203,7 @@ cor_dat = sdc_out$df_pseudoQC_corrected %>%
   left_join(., sim_dat) %>%
   drop_na(area)
 
-cor_dat %>% 
+cor_dat %>%
   ggplot(., aes(area_corrected, area, color = batch))+
   geom_point(alpha=0.5)+
   labs(x = "area_corrected_with_pseudoQC",
@@ -212,12 +212,19 @@ cor_dat %>%
 
 ## ----eval=TRUE, fig.height=10, fig.width=10, fig.align = "center"-------------
 library(caret)
+
+test_dat = cor_dat %>%
+  filter(!batch=="B3")
+
 fc = trainControl(method = "cv", number = 10)
-fit = train(area ~ area_corrected, 
-             data = cor_dat, 
-             method = "lm", 
+fit = train(area ~ area_corrected,
+             data = cor_dat,
+             method = "lm",
              trControl = fc)
 fit
+postResample(pred = cor_dat$area_corrected, obs = cor_dat$area)
+postResample(pred = test_dat$area_corrected, obs = test_dat$area)
+
 par(mfrow = c(2, 2))
 plot(fit$finalModel)
 
