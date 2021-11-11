@@ -145,16 +145,23 @@ pw_outlier <- function(
               mutate(g = all_of(my_batches[j]))
           }
         }
-        diff_vect[[j]] = bind_rows(diff_vect1) %>%
-          group_by(compound, g) %>%
-          summarise(thresh = quantile(value, pw_threshold, na.rm = TRUE))
-        plot_dat[[j]] = bind_rows(diff_vect1) %>%
-          left_join(., diff_vect[[j]], by = c("compound", "g"))
-        most_diff[[j]] = bind_rows(most_diff1) %>%
-          select(-c(geno_tmp, sum_diffs, tmp_rep)) %>%
-          pivot_longer(!c("uid", "compound", "g"),names_to = "variable") %>%
-          left_join(., diff_vect[[j]], by = c("compound", "g")) %>%
-          filter(value>=thresh)
+        dv1L = length(diff_vect1)
+        if (dv1L==0) {
+          diff_vect[[j]] = NULL
+          plot_dat[[j]] = NULL
+          most_diff[[j]] = NULL
+        }else{
+          diff_vect[[j]] = bind_rows(diff_vect1) %>%
+            group_by(compound, g) %>%
+            summarise(thresh = quantile(value, pw_threshold, na.rm = TRUE))
+          plot_dat[[j]] = bind_rows(diff_vect1) %>%
+            left_join(., diff_vect[[j]], by = c("compound", "g"))
+          most_diff[[j]] = bind_rows(most_diff1) %>%
+            select(-c(geno_tmp, sum_diffs, tmp_rep)) %>%
+            pivot_longer(!c("uid", "compound", "g"),names_to = "variable") %>%
+            left_join(., diff_vect[[j]], by = c("compound", "g")) %>%
+            filter(value>=thresh)
+        }
       }
       samps_rm[[i]] = bind_rows(most_diff)
       samps_plot[[i]] = bind_rows(plot_dat)
