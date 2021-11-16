@@ -291,6 +291,53 @@ fit
 par(mfrow = c(2, 2))
 plot(fit$finalModel)
 ```
+Finally, lets determine how pseudoQC compares to doing a true QC correction using the pmp R package [@R-pmp]
+```{r eval=TRUE, fig.height=10, fig.width=10, fig.align = "center"}
+## A short function to format the data how pmp expects it
+m_qcrsc = function(x, y){
+  x = x %>% 
+    mutate(class = ifelse(sample%in%all_of(y), "QC", "Sample"))
+  t_meta = colnames(x)
+  t_meta = t_meta[!t_meta%in%c("name", "compound")]
+  tqc = x %>%
+    pivot_wider(id_cols = !all_of(t_meta), names_from = name, values_from = area)
+  t_rn = tqc$compound
+  tqc = as.matrix(tqc[,-1])
+  rownames(tqc) = t_rn
+  mc = pmp::QCRSC(df=tqc,
+                  minQC = 4,
+                  order=seq_along(x$experiment_index),
+                  batch=x$batch,
+                  classes=x$class,
+                  qc_label = paste0(y))
+  z = x %>%
+    mutate(area_corrected = mc[1,], .before = area)
+  return(z)
+  }
+
+## Run the function
+true_QC = m_qcrsc(mono_b2b_cleaned, "QC")
+
+## Conduct the same diagnostics tests done with pseudoQC above. 
+cor_dat_true_QC = true_QC %>%
+  select(name,area_corrected, class) %>%
+  left_join(., sim_dat) %>%
+  drop_na(area)
+
+cor_dat_true_QC %>% 
+  ggplot(., aes(area_corrected, area, color = batch))+
+  geom_point(alpha=0.5)+
+  labs(x = "area_corrected_with_true_QC",
+       y = "original_area_simulated_without_any_effects")
+
+fit_true_QC = train(area ~ area_corrected, 
+             data = cor_dat_true_QC, 
+             method = "lm", 
+             trControl = fc)
+fit_true_QC
+par(mfrow = c(2, 2))
+plot(fit_true_QC$finalModel)
+```
 
 # Session information
 
