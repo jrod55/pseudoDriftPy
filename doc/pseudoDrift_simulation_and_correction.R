@@ -244,10 +244,10 @@ m_qcrsc = function(x, y){
   return(z)
   }
 
-## Run the function
+## Run the function then conduct the same diagnostics tests done with pseudoQC above. 
 true_QC = m_qcrsc(mono_b2b_cleaned, "QC")
 
-## Conduct the same diagnostics tests done with pseudoQC above. 
+## ----eval=TRUE,  fig.align = "center"-----------------------------------------
 cor_dat_true_QC = true_QC %>%
   select(name,area_corrected, class) %>%
   left_join(., sim_dat) %>%
@@ -259,6 +259,8 @@ cor_dat_true_QC %>%
   labs(x = "area_corrected_with_true_QC",
        y = "original_area_simulated_without_any_effects")
 
+
+## ----eval=TRUE, fig.height=10, fig.width=10, fig.align = "center"-------------
 fit_true_QC = train(area ~ area_corrected, 
              data = cor_dat_true_QC, 
              method = "lm", 
