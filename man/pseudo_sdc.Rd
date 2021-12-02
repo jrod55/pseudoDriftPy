@@ -11,7 +11,7 @@ pseudo_sdc(
   test.breaks = NULL,
   test.window = NULL,
   test.index = NULL,
-  criteria = "RSD",
+  criteria = "RSD_robust",
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = NULL,
@@ -36,7 +36,8 @@ pseudo_sdc(
 
 \item{criteria}{\code{character()} What criteria should be minimized when determining the optimal set of parameters. Should be one of:
 \itemize{
-\item "RSD" relative standard deviation
+\item "RSD" relative standard deviation assuming a Gaussian distribution of errors
+\item "RSD_robust" relative standard deviation assuming a non-Gaussian distribution of errors
 \item "MSE" mean squared error
 \item "TSS" total sum of squares
 }}
@@ -59,7 +60,7 @@ pseudo_sdc(
 \item df (original input data)
 \item df_pseudoQC (data with pseudoQC calculated samples included). Includes an additional column labeled 'class' which categorizes true QC, Sample, Pseudo_QC samples.
 \item df_pseudoQC_corrected (signal drift corrected data using pseudoQC samples). Same columns as df_pseudoQC returned, with an aditional 'area_corrected' column designating the signal drift corrected data.
-\item criteria_table (table with results for criteria applied along with the other two non-used).
+\item criteria_table (table with results for criteria applied along with the others not-used).
 }
 }
 \description{
