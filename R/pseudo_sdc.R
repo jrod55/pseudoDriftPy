@@ -293,7 +293,8 @@ pseudo_sdc <- function(
       }else{
         ssr = tibble(MSE = NA,
                      TSS = NA,
-                     RSD = NA)
+                     RSD = NA,
+                     RSD_robust = NA)
       }
       if (my_return=="yes") {
         return(list(m_min, m_max, m_bre, m_kkk, m_ind, m_in_out))
@@ -307,16 +308,8 @@ pseudo_sdc <- function(
       m_tuning = parallel::mclapply(seq_along(dat_portion1$var1), m_fn, "no", mc.cores = n.cores)
     }
     m_eval = m_tuning %>% map_dfr(~ .x %>% as_tibble(), .id = "name")
-
-    if (criteria == "RSD_robust") {
-      criteria_out = "RSD"
-      m_min_ssr_keep = m_eval %>%
-        select(name, all_of(criteria_out))
-    }else{
-      m_min_ssr_keep = m_eval %>%
-        select(name, all_of(criteria))
-    }
-
+    m_min_ssr_keep = m_eval %>%
+      select(name, all_of(criteria))
     colnames(m_min_ssr_keep)[2] = "value"
     m_min_ssr_keep = m_min_ssr_keep %>%
       slice_min(order_by = value, n = 1)
@@ -348,7 +341,14 @@ pseudo_sdc <- function(
       select(-c(name)) %>%
       mutate(criteria = "RSD")
     colnames(rsd_min)[1] = "value"
-    all_min = bind_rows(mse_min, tss_min, rsd_min)
+    Rrsd_min = m_eval %>%
+      select(name, RSD_robust) %>%
+      slice_min(order_by = RSD_robust, n=1) %>%
+      left_join(.,  dat_portion1 %>% rownames_to_column(), by = c("name"="rowname")) %>%
+      select(-c(name)) %>%
+      mutate(criteria = "RSD_robust")
+    colnames(Rrsd_min)[1] = "value"
+    all_min = bind_rows(mse_min, tss_min, rsd_min, Rrsd_min)
     colnames(all_min) = c("value","quantile_min","quantile_max", "test.breaks","test.window","test.index","in_out","criteria")
     m_fit = lapply(as.numeric(m_min_ssr$name), m_fn, "yes")
     m_min = m_fit[[1]][[1]]
