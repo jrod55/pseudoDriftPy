@@ -137,6 +137,9 @@ pseudo_sdc <- function(
     print(paste0("Running...testing ", nrow(dat_portion1), " combinations of input parameters"))
 
     # QC-RSC with true QCs ----------------------------------------------------
+
+    pseudoQC = m_qcrsc(x = mm, y = "Pseudo_QC", r = "nah")
+
     m_qcrsc = function(x, y, r){
       t_meta = colnames(x)
       t_meta = t_meta[!t_meta%in%c("name", "compound")]
@@ -156,17 +159,13 @@ pseudo_sdc <- function(
       z = x %>%
         mutate(area_corrected = mc[1,], .before = area)
 
-      if (criteria == "RSD_robust") {
-        m_qc = z %>%
-          filter(class == "QC") %>%
-          mutate(rsd = mad(area)/abs(median(area, na.rm = TRUE)),
-                 rsd_tqc = mad(area_corrected, na.rm = TRUE)/abs(median(area_corrected, na.rm = TRUE)))
-      }else{
-        m_qc = z %>%
-          filter(class == "QC") %>%
-          mutate(rsd = sd(area)/abs(mean(area, na.rm = TRUE)),
-                 rsd_tqc = sd(area_corrected, na.rm = TRUE)/abs(mean(area_corrected, na.rm = TRUE)))
-      }
+      m_qc = z %>%
+        filter(class == "QC") %>%
+        mutate(rsd_robust = mad(area)/abs(median(area, na.rm = TRUE)),
+               rsd_tqc_robust = mad(area_corrected, na.rm = TRUE)/abs(median(area_corrected, na.rm = TRUE))) %>%
+        mutate(rsd = sd(area)/abs(mean(area, na.rm = TRUE)),
+               rsd_tqc = sd(area_corrected, na.rm = TRUE)/abs(mean(area_corrected, na.rm = TRUE)))
+
       if (r=="yes") {
         return(z)
       }else{
@@ -292,7 +291,8 @@ pseudo_sdc <- function(
           mutate(sse = (obs-pred)^2) %>%
           summarise(MSE = mean(sse, na.rm = TRUE),
                     TSS = sum(sse, na.rm = TRUE)) %>%
-          mutate(RSD = unique(pseudoQC$rsd_tqc))
+          mutate(RSD = unique(pseudoQC$rsd_tqc),
+                 RSD_robust = unique(pseudoQC$rsd_tqc_robust))
       }else{
         ssr = tibble(MSE = NA,
                      TSS = NA,
@@ -310,11 +310,16 @@ pseudo_sdc <- function(
       m_tuning = parallel::mclapply(seq_along(dat_portion1$var1), m_fn, "no", mc.cores = n.cores)
     }
     m_eval = m_tuning %>% map_dfr(~ .x %>% as_tibble(), .id = "name")
+
     if (criteria == "RSD_robust") {
-      criteria = "RSD"
+      criteria_out = "RSD"
+      m_min_ssr_keep = m_eval %>%
+        select(name, all_of(criteria_out))
+    }else{
+      m_min_ssr_keep = m_eval %>%
+        select(name, all_of(criteria))
     }
-    m_min_ssr_keep = m_eval %>%
-      select(name, all_of(criteria))
+
     colnames(m_min_ssr_keep)[2] = "value"
     m_min_ssr_keep = m_min_ssr_keep %>%
       slice_min(order_by = value, n = 1)
