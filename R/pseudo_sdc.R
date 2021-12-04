@@ -137,9 +137,6 @@ pseudo_sdc <- function(
     print(paste0("Running...testing ", nrow(dat_portion1), " combinations of input parameters"))
 
     # QC-RSC with true QCs ----------------------------------------------------
-
-    pseudoQC = m_qcrsc(x = mm, y = "Pseudo_QC", r = "nah")
-
     m_qcrsc = function(x, y, r){
       t_meta = colnames(x)
       t_meta = t_meta[!t_meta%in%c("name", "compound")]

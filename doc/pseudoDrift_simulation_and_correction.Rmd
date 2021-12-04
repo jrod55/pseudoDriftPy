@@ -189,7 +189,7 @@ t.i = seq(0,ti.max,1)
 # test.breaks = t.b.train     # Test breaking up the training batch into 10 to 12 equally sized sections
 # test.window = w.n           # Test taking the median every 1 (reduces to the mean per test.break), to 9 samples. This sequence of numbers should be all odd.
 # test.index = t.i            # Test offsetting the injection order of pseudoQC samples estimated
-# criteria = "RSD_robust"            # This can be one of: "RSD_robust" (relative standard deviation), "RSD" (relative standard deviation), "MSE" (mean squared error), or "TSS" (total sum of squares). This is the criteria to be minimized.
+# criteria = "RSD"            # This can be one of: "RSD" (relative standard deviation using standard deviation and mean), "RSD_robust" (relative standard deviation using median absolute deviation and median), "MSE" (mean squared error), or "TSS" (total sum of squares). This is the criteria to be minimized.
 # n.cores = 15                # Number of cores to use if your machine has the ability to multi-thread processes.
 # quantile_increment = 0.05   # Quantile values (above/below increment) of the data surrounding QCs to use to estimate pseudoQCs.
 
@@ -199,7 +199,7 @@ t.i = seq(0,ti.max,1)
 # test.breaks = 12 ; test.window = 7; test.index = 5; criteria = "MSE"; quantile_increment = 0.05; n.cores = 1
 
 # For RSD:
-test.breaks = 13 ; test.window = 9; test.index = 14; criteria = "RSD_robust"; quantile_increment = 0.05; n.cores = 1
+test.breaks = 13 ; test.window = 9; test.index = 14; criteria = "RSD"; quantile_increment = 0.05; n.cores = 1
 
 sdc_out = pseudo_sdc(df = mono_b2b_cleaned,
                      n.cores = n.cores,
