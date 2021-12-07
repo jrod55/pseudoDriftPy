@@ -12,4 +12,3 @@ You can install the development version from
 # install.packages("remotes")
 remotes::install_github("jrod55/pseudoDrift")
 ```
-A short vignette can be found [here](https://raw.githack.com/jrod55/pseudoDrift/main/doc/pseudoDrift_simulation_and_correction.html)
