@@ -158,9 +158,9 @@ pseudo_sdc <- function(
 
       m_qc = z %>%
         filter(class == "QC") %>%
-        mutate(rsd_robust = mad(area)/abs(median(area, na.rm = TRUE)),
+        mutate(rsd_robust = mad(area, na.rm = TRUE)/abs(median(area, na.rm = TRUE)),
                rsd_tqc_robust = mad(area_corrected, na.rm = TRUE)/abs(median(area_corrected, na.rm = TRUE))) %>%
-        mutate(rsd = sd(area)/abs(mean(area, na.rm = TRUE)),
+        mutate(rsd = sd(area, na.rm = TRUE)/abs(mean(area, na.rm = TRUE)),
                rsd_tqc = sd(area_corrected, na.rm = TRUE)/abs(mean(area_corrected, na.rm = TRUE)))
 
       if (r=="yes") {
@@ -200,9 +200,17 @@ pseudo_sdc <- function(
         np1 = list()
         for (i in unique(np$n_per)) {
           m_kkk1 = as.numeric(i)
+          m_kkk1_test = 2*floor(m_kkk1/2)+1
+          if(m_kkk1_test>=m_kkk1){
+            m_kkk1_test = m_kkk1_test-2
+          }
+          if (m_kkk1_test<0) {
+            m_kkk1_test = 1
+          }
           np1[[i]] = np %>%
             filter(n_per==m_kkk1) %>%
-            mutate(area = mean(area, na.rm = TRUE),
+            mutate(area = zoo::rollmedian(area, k = m_kkk1_test, fill = NA, align = "left"),
+                   area = mean(area, na.rm = TRUE),
                    class = "Pseudo_QC"
             ) %>%
             ungroup() %>%
@@ -238,9 +246,17 @@ pseudo_sdc <- function(
         np1 = list()
         for (i in unique(np$n_per)) {
           m_kkk1 = as.numeric(i)
+          m_kkk1_test = 2*floor(m_kkk1/2)+1
+          if(m_kkk1_test>=m_kkk1){
+            m_kkk1_test = m_kkk1_test-2
+          }
+          if (m_kkk1_test<0) {
+            m_kkk1_test = 1
+          }
           np1[[i]] = np %>%
             filter(n_per==m_kkk1) %>%
-            mutate(area = mean(area, na.rm = TRUE),
+            mutate(area = zoo::rollmedian(area, k = m_kkk1_test, fill = NA, align = "left"),
+                   area = mean(area, na.rm = TRUE),
                    class = "Pseudo_QC"
             ) %>%
             ungroup() %>%
@@ -313,6 +329,27 @@ pseudo_sdc <- function(
     colnames(m_min_ssr_keep)[2] = "value"
     m_min_ssr_keep = m_min_ssr_keep %>%
       slice_min(order_by = value, n = 1)
+
+    if (criteria == "RSD" | criteria == "RSD_robust") {
+      rsd_raw = m %>%
+        group_by(compound) %>%
+        filter(sample == all_of(qc.label)) %>%
+        summarise(rsd_robust = mad(area, na.rm = TRUE)/abs(median(area, na.rm = TRUE)),
+                  rsd = sd(area, na.rm = TRUE)/abs(mean(area, na.rm = TRUE)))
+
+      if (criteria == "RSD") {
+        rsd_red = rsd_raw$rsd - m_min_ssr_keep$value
+      }
+      if (criteria == "RSD_robust") {
+        rsd_red = rsd_raw$rsd_robust - m_min_ssr_keep$value
+      }
+
+      if (rsd_red<=0) {
+        print(paste0(criteria, " NOT reduced, but instead increased by ", round(-1*rsd_red, 2), " Consider changing parameters or not applying correction to this compound"))
+      }
+      print(paste0(criteria, " reduced by ", round(rsd_red, 2), " relative to no correction"))
+    }
+
     if (nrow(m_min_ssr_keep)==0) {
       stop(" No model could be fit using those parameters. \n
            Try adjusting min.qc or test.breaks parameter. \n
@@ -400,9 +437,17 @@ pseudo_sdc <- function(
       np1 = list()
       for (i in unique(np$n_per)) {
         m_kkk1 = as.numeric(i)
+        m_kkk1_test = 2*floor(m_kkk1/2)+1
+        if(m_kkk1_test>=m_kkk1){
+          m_kkk1_test = m_kkk1_test-2
+        }
+        if (m_kkk1_test<0) {
+          m_kkk1_test = 1
+        }
         np1[[i]] = np %>%
           filter(n_per==m_kkk1) %>%
-          mutate(area = mean(area, na.rm = TRUE),
+          mutate(area = zoo::rollmedian(area, k = m_kkk1_test, fill = NA, align = "left"),
+                 area = mean(area, na.rm = TRUE),
                  class = "Pseudo_QC"
           ) %>%
           ungroup() %>%
@@ -440,9 +485,17 @@ pseudo_sdc <- function(
       np1 = list()
       for (i in unique(np$n_per)) {
         m_kkk1 = as.numeric(i)
+        m_kkk1_test = 2*floor(m_kkk1/2)+1
+        if(m_kkk1_test>=m_kkk1){
+          m_kkk1_test = m_kkk1_test-2
+        }
+        if (m_kkk1_test<0) {
+          m_kkk1_test = 1
+        }
         np1[[i]] = np %>%
           filter(n_per==m_kkk1) %>%
-          mutate(area = mean(area, na.rm = TRUE),
+          mutate(area = zoo::rollmedian(area, k = m_kkk1_test, fill = NA, align = "left"),
+                 area = mean(area, na.rm = TRUE),
                  class = "Pseudo_QC"
           ) %>%
           ungroup() %>%
