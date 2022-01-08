@@ -58,7 +58,7 @@ pseudo_sdc <- function(
   criteria = "RSD",
   qc.label = NULL,
   qc.multibatch = FALSE,
-  min.qc = NULL,
+  min.qc = 5,
   quantile_increment = 1,
   log_transform = TRUE,
   mad_outlier = TRUE,
