@@ -16,7 +16,7 @@
 #' }
 #' @param qc.label \code{character()} Label designating the QC sample in the sample column of df.
 #' @param min.qc \code{numeric()} The minimum number of pseudo-QC samples to consider during model training. Should be a value greater than 2.
-#' @param quantile_increment \code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.
+#' @param quantile.increment \code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.
 #' @param log_transform \code{logical()} TRUE(default)/FALSE should data be log transformed
 #' @param mad_outlier \code{logical()} TRUE(default)/FALSE should median absolute deviation (MAD) based outliers be excluded from signal drift calculation
 #' @param mad_threshold \code{numeric()} How many MAD from the median a value can be before considered an outlier. Default is 3.
@@ -59,7 +59,7 @@ pseudo_sdc <- function(
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = 5,
-  quantile_increment = 1,
+  quantile.increment = 1,
   log_transform = TRUE,
   mad_outlier = TRUE,
   mad_threshold = 3){
@@ -109,11 +109,11 @@ pseudo_sdc <- function(
       group_by(batch) %>%
       mutate(pool_rank = percent_rank(area)) %>%
       filter(class == "QC")
-    vals_keep = ceiling(range(vals_keep$pool_rank, na.rm = TRUE)/quantile_increment)*quantile_increment
+    vals_keep = ceiling(range(vals_keep$pool_rank, na.rm = TRUE)/quantile.increment)*quantile.increment
 
     # Using what portion of the data and what partitioning of the batch gives best fit for the training data
-    test_low = seq(0,vals_keep[1],quantile_increment)
-    test_high = seq(vals_keep[2],1,quantile_increment)
+    test_low = seq(0,vals_keep[1],quantile.increment)
+    test_high = seq(vals_keep[2],1,quantile.increment)
     n_breaks = test.breaks
     k = test.window
     ind = test.index

@@ -14,8 +14,8 @@ pseudo_sdc(
   criteria = "RSD",
   qc.label = NULL,
   qc.multibatch = FALSE,
-  min.qc = NULL,
-  quantile_increment = 1,
+  min.qc = 5,
+  quantile.increment = 1,
   log_transform = TRUE,
   mad_outlier = TRUE,
   mad_threshold = 3
@@ -46,7 +46,7 @@ pseudo_sdc(
 
 \item{min.qc}{\code{numeric()} The minimum number of pseudo-QC samples to consider during model training. Should be a value greater than 2.}
 
-\item{quantile_increment}{\code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.}
+\item{quantile.increment}{\code{numeric()} Incremental step for qunatiles of peak areas to retain in training model.}
 
 \item{log_transform}{\code{logical()} TRUE(default)/FALSE should data be log transformed}
 
