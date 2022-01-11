@@ -27,7 +27,7 @@
 #' \item df_pseudoQC_corrected (signal drift corrected data using pseudoQC samples). Same columns as df_pseudoQC returned, with an aditional 'area_corrected' column designating the signal drift corrected data.
 #' \item criteria_table (table with results for criteria applied along with the others not-used).
 #' }
-#' @import dplyr pmp
+#' @import dplyr pmp zoo
 #' @importFrom data.table fread
 #' @importFrom parallel mclapply
 #' @export
