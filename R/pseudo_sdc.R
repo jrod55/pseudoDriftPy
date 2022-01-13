@@ -55,7 +55,7 @@ pseudo_sdc <- function(
   test.breaks = NULL,
   test.window = NULL,
   test.index = NULL,
-  criteria = "RSD",
+  criteria = "MSE",
   qc.label = NULL,
   qc.multibatch = FALSE,
   min.qc = 5,
