@@ -139,7 +139,7 @@ pseudo_sdc <- function(
     # QC-RSC with true QCs ----------------------------------------------------
     m_qcrsc = function(x, y, r){
       t_meta = colnames(x)
-      t_meta = t_meta[!t_meta%in%c("name", "compound")]
+      t_meta = t_meta[!t_meta%in%c("name", "compound", "area")]
       tqc = x %>%
         pivot_wider(id_cols = !all_of(t_meta), names_from = name, values_from = area)
       t_rn = tqc$compound
