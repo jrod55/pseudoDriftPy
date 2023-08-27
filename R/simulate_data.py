@@ -1,3 +1,3 @@
 """
-Porting simulate_data.R
+Porting simulate_data.R functions
 """

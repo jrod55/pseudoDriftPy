@@ -1,3 +1,3 @@
 """
-Porting pseudo_sdc.R
+Porting pseudo_sdc.R functions
 """

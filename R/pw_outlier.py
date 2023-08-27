@@ -1,3 +1,3 @@
 """
-Porting pw_outlier.R
+Porting pw_outlier.R functions
 """
