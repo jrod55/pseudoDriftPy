@@ -3,7 +3,7 @@ Porting pseudoDrift R package to python
 
 ## pseudoDriftPy
 
-pseudoDriftPy is a python implementation of the R package [pseudoDrift](https://github.com/jrod55/pseudoDrift), which is a tool for simulating and post-processing metabolomics data. 
+pseudoDriftPy is a python implementation of the R package [pseudoDrift](https://github.com/jrod55/pseudoDrift), which is a tool for simulating and normalizing metabolomics data for signal drift and batch effects. 
 
 ## Citation
 
