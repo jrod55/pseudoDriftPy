@@ -11,3 +11,5 @@ doc/pseudoDrift_simulation_and_correction.R
 doc/pseudoDrift_simulation_and_correction.Rmd
 /doc/
 /Meta/
+/R/00_testing.py
+/R/00_testing.ipynb
