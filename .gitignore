@@ -1,15 +1,2 @@
-pseudoDrift.Rproj
-.Rbuildignore
-.RData
-.Rhistory
-.Rproj.user/
-vignettes/
-pushme.sh
-Meta/
-doc/pseudoDrift_simulation_and_correction.pdf
-doc/pseudoDrift_simulation_and_correction.R
-doc/pseudoDrift_simulation_and_correction.Rmd
-/doc/
-/Meta/
-/R/00_testing.py
-/R/00_testing.ipynb
+/pseudoDrift/00_testing.py
+/pseudoDrift/00_testing.ipynb
