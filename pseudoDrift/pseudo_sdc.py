@@ -2,11 +2,28 @@ import pandas as pd
 import numpy as np
 from scipy.stats import rankdata
 
-def pseudo_sdc(df=None, n_cores=1, train_batch=None, test_breaks=None, 
-               test_window=None, test_index=None, criteria="MSE", qc_label=None,
-               qc_multibatch=False, min_qc=5, quantile_increment=1, 
-               log_transform=True, mad_outlier=True, mad_threshold=3):
+def pseudo_sdc(df=None,
+               n_cores=1,
+               train_batch=None,
+               test_breaks=None, 
+               test_window=None,
+               test_index=None,
+               criteria="MSE",
+               qc_label=None,
+               qc_multibatch=False,
+               min_qc=5,
+               quantile_increment=1,
+               log_transform=True,
+               mad_outlier=True,
+               mad_threshold=3):
     
+    nc = list(range(1, len(df['compound'].unique()) + 1))
+    
+    if len(nc) > 1:
+        print(f"df contains more than one compound. Running for {max(nc)} compounds")
+    
+    comps_within = df['compound'].unique().tolist()
+
     # QCRSC helper function for Quality Control-Robust Spline Correction 
     def m_qcrsc(x, y, r):
         t_meta = [col for col in x.columns if col not in ["name", "compound", "area"]]
