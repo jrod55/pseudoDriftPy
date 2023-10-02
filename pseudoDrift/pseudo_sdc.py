@@ -109,7 +109,28 @@ def pseudo_sdc(df=None,
         n_breaks = test_breaks
         k = test_window
 
-        # Placeholder for the dat_portion calculations per batch
+        # Input parameters and proportion of the test data
+        dat_portion = pd.DataFrame({
+            'var1': np.tile(test_low, len(test_high)),
+            'var2': np.repeat(test_high, len(test_low)),
+            'var3': test_breaks,
+            'var4': test_window,
+            'var5': test_index})
+        
+        dat_portion['var1'] = dat_portion[['var1', 'var2']].min(axis=1)
+        dat_portion['var2'] = dat_portion[['var1', 'var2']].max(axis=1)
+        dat_portion = dat_portion.drop_duplicates()
+        dat_portion = dat_portion[dat_portion['var1'] != dat_portion['var2']]
+        dat_portion = dat_portion[abs(dat_portion['var1'] - dat_portion['var2']) > 0.50]
+        dat_portion['in_out'] = 'inside'
+        dat_portion1 = dat_portion[(dat_portion['var1'] != 0) & (dat_portion['var2'] != 1)].copy()
+        dat_portion1['in_out'] = 'outside'
+        dat_portion1 = pd.concat([dat_portion1, dat_portion], axis=0)
+        
+        print(f"Running...testing {len(dat_portion1)} combinations of input parameters")
+
+        
+
         # TODO: Translate the dat_portion part of the function..what portion of the data and what partitioning of the batch gives best fit for the training data
 
         return sub_df  # Placeholder
